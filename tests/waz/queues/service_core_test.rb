@@ -38,24 +38,41 @@ describe "storage service core behavior" do
   end
   
   it "should canonicalize headers (order lexicographical, trim values, and join by NEW_LINES)" do
+    service = WAZ::Queues::Service.new("mock-account", "mock-key", true, "localhost")
     headers = { "Content-Type" => "application/xml",
                 "x-ms-prop-z" => "p",
                 "x-ms-meta-name" => "a ",
                 "x-other" => "other"}
 
-    WAZ::Queues::Service.canonicalize_headers(headers).should == "x-ms-meta-name:a\nx-ms-prop-z:p"
+    service.canonicalize_headers(headers).should == "x-ms-meta-name:a\nx-ms-prop-z:p"
   end
   
   it "should return empty string when no MS headers" do
+    service = WAZ::Queues::Service.new("mock-account", "mock-key", true, "localhost")
     headers = { "Content-Type" => "application/xml",
                 "x-other" => "other"}
 
-    WAZ::Queues::Service.canonicalize_headers(headers).should == ""
+    service.canonicalize_headers(headers).should == ""
   end
   
   it "should cannonicalize message by appending account_name to the request path" do
     service = WAZ::Queues::Service.new("mock-account", "mock-key", true, "localhost")
-    service.canonicalize_message("http://ocalhost/queue?comp=list").should == "/mock-account/queue?comp=list"
+    service.canonicalize_message("http://localhost/queue?comp=list").should == "/mock-account/queue?comp=list"
+  end
+  
+  it "should ignore every other querystring parameter rather than comp=" do
+    service = WAZ::Queues::Service.new("mock-account", "mock-key", true, "localhost")
+    service.canonicalize_message("http://localhost/queue?myparam=1").should == "/mock-account/queue"
+  end
+  
+  it "should properly canonicalize message when no parameter associated with it" do
+    service = WAZ::Queues::Service.new("mock-account", "mock-key", true, "localhost")
+    service.canonicalize_message("http://mock-account.queue.core.windows.net/").should == "/mock-account/"
+  end
+  
+  it "should properly canonicalize message when a resource is associated with it" do
+    service = WAZ::Queues::Service.new("mock-account", "mock-key", true, "localhost")
+    service.canonicalize_message("http://mock-account.queue.core.windows.net/resource?comp=list").should == "/mock-account/resource?comp=list"
   end
   
   it "should generate request with proper headers" do

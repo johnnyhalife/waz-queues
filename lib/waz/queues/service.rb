@@ -1,15 +1,8 @@
 module WAZ
   module Queues
     class Service
-      attr_accessor :account_name, :account_key, :use_ssl, :base_url
-      
-      def initialize(account_name, account_key, use_ssl = false, base_url = "queue.core.windows.net" )
-        self.account_name = account_name
-        self.account_key = account_key 
-        self.use_ssl = use_ssl
-        self.base_url = base_url
-      end
-      
+      include WAZ::Storage::SharedKeyCoreService
+          
       def list_queues(options ={})
         url = generate_request_uri("list", nil)
         request = generate_request("GET", url)
@@ -28,48 +21,75 @@ module WAZ
           request = generate_request("PUT", url, metadata)
           request.execute()
         rescue RestClient::RequestFailed
-          raise WAZ::Queues::QueueAlreadyExists, queue_name
+          raise WAZ::Queues::QueueAlreadyExists, queue_name if $!.http_code == 409
         end
       end
       
-      def generate_request(verb, url, headers = {}, payload = nil)
-        http_headers = {}
-        headers.each{ |k, v| http_headers[k.to_s.gsub(/_/, '-')] = v} unless headers.nil?
-        request = RestClient::Request.new(:method => verb.downcase.to_sym, :url => url, :headers => http_headers, :payload => payload)
-        request.headers["x-ms-Date"] = Time.new.httpdate
-        request.headers["Content-Length"] = (request.payload or "").length
-        request.headers["Authorization"] = "SharedKey #{account_name}:#{generate_signature(request)}"
-        return request
-      end
-            
-      def generate_request_uri(operation = nil, path = nil, options = {})
-        protocol = use_ssl ? "https" : "http"
-        query_params = options.keys.sort{ |a, b| a.to_s <=> b.to_s}.map{ |k| "#{k.to_s.gsub(/_/, '')}=#{options[k]}"}.join("&") unless options.empty?
-        uri = "#{protocol}://#{account_name}.#{base_url}#{(path or "").start_with?("/") ? "" : "/"}#{(path or "")}#{operation ? "?comp=" + operation : ""}"
-        uri << "#{operation ? "&" : "?"}#{query_params}" if query_params
-        return uri
+      def delete_queue(queue_name)
+        url = generate_request_uri(nil, queue_name)
+        request = generate_request("DELETE", url)
+        request.execute()
       end
       
-      def self.canonicalize_headers(headers)
-        cannonicalized_headers = headers.keys.select {|h| h.to_s.start_with? 'x-ms'}.map{ |h| "#{h.downcase.strip}:#{headers[h].strip}" }.sort{ |a, b| a <=> b }.join("\x0A")
-        return cannonicalized_headers
+      def get_queue_metadata(queue_name)
+        url = generate_request_uri("metadata", queue_name)
+        request = generate_request("HEAD", url)
+        request.execute().headers
       end
       
-      def canonicalize_message(url)
-        uri_component = url.gsub(/https?:\/\/[^\/]+\//i, '').scan(/([^&]+)/i).first()
-        cannonicalized_message = "/#{self.account_name}/#{uri_component}"
+      def set_queue_metadata(queue_name, metadata = {})
+        url = generate_request_uri("metadata", queue_name)
+        request = generate_request("PUT", url, metadata)
+        request.execute()
       end
       
-      def generate_signature(request)
-         signature = request.method.to_s.upcase + "\x0A" +
-                     (request.headers["Content-MD5"] or "") + "\x0A" +
-                     (request.headers["Content-Type"] or "") + "\x0A" +
-                     (request.headers["Date"] or "")+ "\x0A" +
-                     self.class.canonicalize_headers(request.headers) + "\x0A" +
-                     canonicalize_message(request.url)
-                     
-         return Base64.encode64(HMAC::SHA256.new(Base64.decode64(self.account_key)).update(signature.toutf8).digest)
-       end
+      # ttl Specifies the time-to-live interval for the message, in seconds. 
+      # The maximum time-to-live allowed is 7 days. If this parameter is omitted, the default time-to-live is 7 days.
+      def enqueue(queue_name, message_payload, ttl = 604800)
+        url = generate_request_uri(nil, "#{queue_name}/messages", "messagettl" => ttl)
+        payload = "<?xml version=\"1.0\" encoding=\"utf-8\"?><QueueMessage><MessageText>#{message_payload}</MessageText></QueueMessage>"
+        request = generate_request("POST", url, { "Content-Type" => "application/xml" }, payload)
+        request.execute()
+      end
+      
+      # :num_of_messages option specifies the max number of messages to get (maximum 32)
+      # :visibility_timeout option specifies the timeout of the message locking in seconds (max two hours)
+      def get_messages(queue_name, options = {})
+        raise WAZ::Queues::OptionOutOfRange, {:name => :num_of_messages, :min => 1, :max => 32} if (options.keys.include?(:num_of_messages) && (options[:num_of_messages].to_i < 1 || options[:num_of_messages].to_i > 32))
+        raise WAZ::Queues::OptionOutOfRange, {:name => :visibility_timeout, :min => 1, :max => 32} if (options.keys.include?(:visibility_timeout) && (options[:visibility_timeout].to_i < 1 || options[:visibility_timeout].to_i > 7200))
+        url = generate_request_uri(nil, "#{queue_name}/messages", options)
+        request = generate_request("GET", url)
+        doc = REXML::Document.new(request.execute())
+        messages = []
+        REXML::XPath.each(doc, '//QueueMessage/') do |item|
+          message = { :message_id => REXML::XPath.first(item, "MessageId").text,
+                      :message_text => REXML::XPath.first(item, "MessageText").text,
+                      :expiration_time => Time.httpdate(REXML::XPath.first(item, "ExpirationTime").text),
+                      :insertion_time => Time.httpdate(REXML::XPath.first(item, "InsertionTime").text) }
+
+          # This are only valid when peek-locking messages
+          message[:pop_receipt] = REXML::XPath.first(item, "PopReceipt").text unless REXML::XPath.first(item, "PopReceipt").nil?
+          message[:time_next_visible] = Time.httpdate(REXML::XPath.first(item, "TimeNextVisible").text) unless REXML::XPath.first(item, "TimeNextVisible").nil?
+          messages << message
+        end
+        return messages
+      end
+      
+      def peek(queue_name, options = {})
+        return get_messages(queue_name, {:peek_only => true}.merge(options))
+      end
+      
+      def delete_message(queue_name, message_id, pop_receipt)
+        url = generate_request_uri(nil, "#{queue_name}/messages/#{message_id}", :pop_receipt => pop_receipt)
+        request = generate_request("DELETE", url)
+        request.execute()
+      end
+      
+      def clear_queue(queue_name)
+        url = generate_request_uri(nil, "#{queue_name}/messages")
+        request = generate_request("DELETE", url)
+        request.execute()
+      end
     end
   end
 end
