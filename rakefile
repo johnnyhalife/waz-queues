@@ -17,9 +17,9 @@ end
 
 namespace :dist do  
   spec = Gem::Specification.new do |s|
-    s.name              = 'waz-blobs'
+    s.name              = 'waz-queues'
     s.version           = Gem::Version.new(WAZ::Queues::Version)
-    s.summary           = "Client library for Windows Azure's Blob Storage Service's REST API"
+    s.summary           = "Client library for Windows Azure's Queue Storage Service's REST API"
     s.description       = s.summary
     s.email             = 'johnny.halife@me.com'
     s.author            = 'Johnny G. Halife'

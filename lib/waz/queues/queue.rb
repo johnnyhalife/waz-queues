@@ -46,6 +46,8 @@ module WAZ
         service_instance.get_queue_metadata(self.name)
       end
       
+      # when overwrite passed different than true it overrides 
+      # the metadata for the queue 
       def put_properties!(new_metadata = {}, overwrite = false)
         new_metadata.merge!(metadata.reject { |k, v| !k.to_s.start_with? "x_ms_meta"} ) unless overwrite
         service_instance.set_queue_metadata(new_metadata)

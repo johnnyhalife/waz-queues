@@ -56,7 +56,7 @@ module WAZ
       # :visibility_timeout option specifies the timeout of the message locking in seconds (max two hours)
       def get_messages(queue_name, options = {})
         raise WAZ::Queues::OptionOutOfRange, {:name => :num_of_messages, :min => 1, :max => 32} if (options.keys.include?(:num_of_messages) && (options[:num_of_messages].to_i < 1 || options[:num_of_messages].to_i > 32))
-        raise WAZ::Queues::OptionOutOfRange, {:name => :visibility_timeout, :min => 1, :max => 32} if (options.keys.include?(:visibility_timeout) && (options[:visibility_timeout].to_i < 1 || options[:visibility_timeout].to_i > 7200))
+        raise WAZ::Queues::OptionOutOfRange, {:name => :visibility_timeout, :min => 1, :max => 7200} if (options.keys.include?(:visibility_timeout) && (options[:visibility_timeout].to_i < 1 || options[:visibility_timeout].to_i > 7200))
         url = generate_request_uri(nil, "#{queue_name}/messages", options)
         request = generate_request("GET", url)
         doc = REXML::Document.new(request.execute())
