@@ -111,4 +111,4 @@ contributed by: Ezequiel Morito (http://blogs.southworks.net/emorito) and Juan P
 
 Released under the MIT License: http://www.opensource.org/licenses/mit-license.php
 
-http://github.com/johnnyhalife/waz-blobs
+http://github.com/johnnyhalife/waz-queues
