@@ -101,7 +101,7 @@ regarding its status and visibility. Here are all the things that you can do wit
 === Remarks
 Windows Azure Queues are extremely powerful for asyc programming, they are very useful when you don't need "always consistent" data operations
 allowing you to enqueue and process on background. It's important to mention that being WAZ-Queues a buffered message system, you should design
-for idempotent operations given the fact that there's no guarantee that a message can be repeated.
+for idempotent operations given the fact that there's no guarantee that a message can be repeated.g
 
 == Meta
 
