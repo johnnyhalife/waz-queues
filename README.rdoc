@@ -1,109 +1,6 @@
-= Windows Azure Queues library -- simple gem for accessing WAZ's Storage Queue REST API
+# This project has been moved to [waz-storage](http://github.com/johnnyhalife/waz-storage)
 
-Client library that will enable you to consume the Windows Azure Storage Service Queue thru it's REST API. Despite of waz-queues (http://github.com/johnnyhalife/waz-queues/)
-this comes from own inventive and the shared experiences with colleagues that being using or are currently using WAZ Queues. 
-
-== Getting started
-	sudo gem install waz-queues --source http://gemcutter.org
-
-== Getting started
-This sample illustrates the basics of interacting with Windows Azure Queue,  and the API I've built for it. 
-For further info on each operation of the API read this whole document.
-
-	require 'waz-queues'
-	
-	service = WAZ::Queues::Base.establish_connection!(:account_name => account_name, 
-	                                                  :access_key => access_key)
-
-	# excepts that the metadata for the queue changes this method behaves as PUT (create/replace)
-	# remarks: it performs a validation whether metadata changed or not (if changed HTTP 409 conflict)
-	queue = WAZ::Queues::Queue.create('my-queue')
-
-	10.times do |m|
-	  # enqueue a receives string. Message content can be anything up to 8KB
-	  # you can serialize and send anything that serializes to UTF-8 string (JSON, XML, etc)
-	  queue.enqueue!("message##{m}")
-	end
-
-	while(queue.size > 0) do
-	  # Since WAZ implements the peek lock pattern we are locking messages (not dequeuing)
-		# it has two parameters how many messages and for how long they are locked
-	  messages = queue.lock(10)
-	
-	  puts "dequeued message: #{messages.size}"
-	
-		# deletes the message from the queue so other clients do not pick it after
-		# visibility time out expires
-	  messages.each {|m| m.destroy!}
-	end
-
-
-== Usage: Dealing with queue
-These are the methods implemented from Microsoft's API description available on MSDN at http://msdn.microsoft.com/en-us/library/dd179363.aspx
-
-	# list available queues
-	WAZ::Queues::Queue.list
-
-	# create a queue (here you can also send hashed metadata)
-	WAZ::Queues::Queue.create('my-container')
-	
-	# get a specific queue
-	queue = WAZ::Queues::Container.find('my-container')
-	
-	# get queue properties (including default headers)
-	queue.metadata #=> hash containing beautified metadata (:x_ms_meta_name)
-	
-	# set container properties (should follow x-ms-meta to be persisted)
-	# if you specify the optional parameter overwrite, existing metadata 
-	# will be deleted else merged with new one.
-	queue.put_properties!(:x_ms_meta_MyProperty => "my value")
-	
-	# delete queue
-	queue.destroy!
-	
-	# clear queue contents
-	queue.clear
-	
-	# enqueue a message 
-	queue.enqueue!("payload of the message")
-	
-	# peek a message/s (do not alter visibility, it can't be deleted neither)
-	# num_of_messages (1 to 32) to be peeked (default 1)
-	message = queue.peek
-	
-	# lock a message/s.
-	# num_of_messages (1 to 32) to be peeked (default 1)
-	# visiblity_timeout (default 60 sec. max 7200 [2hrs])
-	message = queue.lock
-
-== Usage: Dealing with messages
-Messages on Windows Azure Queue Storage are pretty simple, they consist on an UTF-8 string up-to 8KB and some metadata
-regarding its status and visibility. Here are all the things that you can do with a message
-
-	message.message_id #=> returns message id
-	
-	# this is the most important method regarding messages
-	message.message_text #=> returns message contents
-	
-	message.pop_receipt #=> used for correlating your dequeue request + a delete operation
-	
-	message.expiration_time #=> returns when the message will be removed from the queue
-	
-	message.time_next_visible #=> when the message will be visible to other users
-	
-	message.insertion_time #=> when the message will be visible to other users
-	
-	message.queue_name #=> returns the queue name where the message belongs
-	
-	# remove the message from the queue
-	message.destroy! 
-	
-=== Remarks
-Windows Azure Queues are extremely powerful for asyc programming, they are very useful when you don't need "always consistent" data operations
-allowing you to enqueue and process on background. It's important to mention that being WAZ-Queues a buffered message system, you should design
-for idempotent operations given the fact that there's no guarantee that a message can be repeated.g
-
-== Meta
+##Meta
 
 Written by Johnny G. Halife (johnny.halife at me dot com)
 
@@ -111,4 +8,4 @@ contributed by: Ezequiel Morito (http://blogs.southworks.net/emorito) and Juan P
 
 Released under the MIT License: http://www.opensource.org/licenses/mit-license.php
 
-http://github.com/johnnyhalife/waz-queues
+http://github.com/johnnyhalife/waz-storage
