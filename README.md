@@ -2,7 +2,7 @@
 
 ##Meta
 
-Written by Johnny G. Halife (johnny.halife at me dot com)
+Written by Johnny Halife (johnny.halife at me dot com)
 
 contributed by: Ezequiel Morito (http://blogs.southworks.net/emorito) 
 and Juan Pablo Garcia (http://blogs.southworks.net/jpgarcia)
