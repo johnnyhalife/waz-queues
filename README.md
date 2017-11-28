@@ -4,7 +4,11 @@
 
 Written by Johnny G. Halife (johnny.halife at me dot com)
 
-contributed by: Ezequiel Morito (http://blogs.southworks.net/emorito) and Juan Pablo Garcia (http://blogs.southworks.net/jpgarcia)
+contributed by: Ezequiel Morito (http://blogs.southworks.net/emorito) 
+
+
+
+and Juan Pablo Garcia (http://blogs.southworks.net/jpgarcia)
 
 Released under the MIT License: http://www.opensource.org/licenses/mit-license.php
 
